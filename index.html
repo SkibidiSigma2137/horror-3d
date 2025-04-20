@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Playtime Remnants: Rozdział 5</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    #textBox {
+      position: absolute;
+      bottom: 30px;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      text-shadow: 0 0 10px black;
+    }
+  </style>
+</head>
+<body>
+  <div id="textBox"></div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/PointerLockControls.js"></script>
+  <script>
+    let scene, camera, renderer, controls, flashlight;
+    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+    let velocity = new THREE.Vector3();
+    const clock = new THREE.Clock();
+
+    const textBox = document.getElementById("textBox");
+    const introTexts = [
+      "Zabawa się skończyła...",
+      "To miała być tylko eksploracja starych hal produkcyjnych...",
+      "Ale teraz jesteś sam.",
+      "Coś tu zostało. To coś... dziwnego.",
+      "Oczy patrzą z każdej strony.",
+      "A z brzucha... coś warczy.",
+      "Musisz stąd uciec."
+    ];
+    let currentText = 0;
+
+    function showNextText() {
+      if (currentText < introTexts.length) {
+        textBox.textContent = introTexts[currentText++];
+        setTimeout(showNextText, 3500);
+      } else {
+        textBox.style.display = "none";
+      }
+    }
+
+    init();
+    animate();
+    showNextText();
+
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 1000);
+      camera.position.set(0, 2, 10);
+      scene.add(camera);
+
+      flashlight = new THREE.SpotLight(0xffffff, 2, 100, Math.PI / 6, 0.5, 2);
+      flashlight.castShadow = true;
+      flashlight.position.set(0, 2, 0);
+      flashlight.target.position.set(0, 0, -1);
+      scene.add(flashlight);
+      scene.add(flashlight.target);
+
+      const ambient = new THREE.AmbientLight(0xffffff, 0.2);
+      scene.add(ambient);
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(100, 100),
+        new THREE.MeshStandardMaterial({ color: 0x444444 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+      const wall1 = new THREE.Mesh(new THREE.BoxGeometry(1, 5, 50), wallMaterial);
+      wall1.position.set(-5, 2.5, 0);
+      scene.add(wall1);
+
+      const wall2 = new THREE.Mesh(new THREE.BoxGeometry(1, 5, 50), wallMaterial);
+      wall2.position.set(5, 2.5, 0);
+      scene.add(wall2);
+
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(10, 5, 1), wallMaterial);
+      backWall.position.set(0, 2.5, -25);
+      scene.add(backWall);
+
+      const testLightSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0xffff00 })
+      );
+      testLightSphere.position.set(0, 2, -5);
+      scene.add(testLightSphere);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      document.body.appendChild(renderer.domElement);
+
+      controls = new THREE.PointerLockControls(camera, document.body);
+      document.body.addEventListener('click', () => {
+        controls.lock();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyW') moveForward = true;
+        if (e.code === 'KeyS') moveBackward = true;
+        if (e.code === 'KeyA') moveLeft = true;
+        if (e.code === 'KeyD') moveRight = true;
+      });
+
+      document.addEventListener('keyup', (e) => {
+        if (e.code === 'KeyW') moveForward = false;
+        if (e.code === 'KeyS') moveBackward = false;
+        if (e.code === 'KeyA') moveLeft = false;
+        if (e.code === 'KeyD') moveRight = false;
+      });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      velocity.set(0, 0, 0);
+
+      if (moveForward) velocity.z -= 20 * delta;
+      if (moveBackward) velocity.z += 20 * delta;
+      if (moveLeft) velocity.x -= 20 * delta;
+      if (moveRight) velocity.x += 20 * delta;
+
+      controls.moveRight(velocity.x * delta);
+      controls.moveForward(velocity.z * delta);
+
+      flashlight.position.copy(camera.position);
+
+      const direction = new THREE.Vector3();
+      camera.getWorldDirection(direction);
+      flashlight.target.position.copy(camera.position).add(direction);
+      flashlight.target.updateMatrixWorld();
+
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>
